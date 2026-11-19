@@ -3,263 +3,575 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Duck Hunt Elite 3D</title>
+
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#101b14;color:white;font-family:Arial}
-header{height:65px;background:#14251a;border-bottom:2px solid #c9a64b;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
-h1{color:#e4c46b;font-size:20px}
-.stats{display:flex;gap:18px;font-weight:bold}
-.stats span{color:#e4c46b}
-canvas{display:block;width:100%;height:calc(100vh - 65px)}
-#overlay{position:fixed;inset:65px 0 0;background:#07120bbd;display:flex;align-items:center;justify-content:center;text-align:center}
-.panel{background:#182d20;border:1px solid #c9a64b;border-radius:15px;padding:30px;width:min(400px,90%)}
-.panel h2{color:#e4c46b}
-button{background:#c9a64b;border:0;border-radius:7px;padding:14px 28px;font-size:16px;font-weight:bold;cursor:pointer}
-#message{color:#e4c46b;margin-top:15px}
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #101b14;
+  color: white;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+header {
+  height: 65px;
+  background: #14251a;
+  border-bottom: 2px solid #c9a64b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+h1 {
+  color: #e4c46b;
+  font-size: 20px;
+}
+
+.stats {
+  display: flex;
+  gap: 18px;
+  font-weight: bold;
+}
+
+.stats span { color: #e4c46b; }
+
+#game {
+  width: 100%;
+  height: calc(100vh - 65px);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+#overlay {
+  position: fixed;
+  inset: 65px 0 0;
+  background: #07120bcc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 3;
+}
+
+.panel {
+  background: #182d20;
+  border: 1px solid #c9a64b;
+  border-radius: 15px;
+  padding: 30px;
+  width: min(400px, 90%);
+}
+
+.panel h2 { color: #e4c46b; }
+
+button {
+  background: #c9a64b;
+  border: 0;
+  border-radius: 7px;
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
+#message {
+  color: #e4c46b;
+  margin-top: 15px;
+  min-height: 20px;
+}
 </style>
+
+<!-- Import map: connects Three.js and its model loader -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
 </head>
+
 <body>
+
 <header>
-<h1>🦆 DUCK HUNT ELITE</h1>
-<div class="stats">
-<div>SCORE: <span id="score">0</span></div>
-<div>TIME: <span id="time">60</span></div>
-<div>ROUND: <span id="round">1</span></div>
-</div>
+  <h1>🦆 DUCK HUNT ELITE</h1>
+  <div class="stats">
+    <div>SCORE: <span id="score">0</span></div>
+    <div>TIME: <span id="time">60</span></div>
+    <div>ROUND: <span id="round">1</span></div>
+  </div>
 </header>
 
 <div id="game"></div>
 
 <div id="overlay">
-<div class="panel">
-<h2 id="heading">DUCK HUNT ELITE</h2>
-<p id="description">Welcome to the marsh.</p>
-<button id="start">START GAME</button>
-<div id="message">Your Mallard 3D model is ready to load.</div>
+  <div class="panel">
+    <h2 id="heading">DUCK HUNT ELITE</h2>
+    <p id="description">Welcome to the marsh.</p>
+    <button id="start" disabled>LOADING...</button>
+    <div id="message">Loading your Mallard 3D model...</div>
+  </div>
 </div>
-</div>
 
-<script type="importmap"> {   "imports": {     "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"   } } </script>  <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
+<script type="module">
 
-const root=document.querySelector('#game');
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x9bb9b6);
-scene.fog=new THREE.Fog(0x9bb9b6,35,110);
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const camera=new THREE.PerspectiveCamera(60,innerWidth/(innerHeight-65),.1,200);
-camera.position.set(0,5,17);
-camera.lookAt(0,4,0);
+// ----------------------------------
+// BASIC SETUP
+// ----------------------------------
 
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight-65);
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.outputColorSpace=THREE.SRGBColorSpace;
+const root = document.querySelector('#game');
+const message = document.querySelector('#message');
+const startButton = document.querySelector('#start');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9bb9b6);
+scene.fog = new THREE.Fog(0x9bb9b6, 35, 110);
+
+const camera = new THREE.PerspectiveCamera(
+  60,
+  innerWidth / (innerHeight - 65),
+  0.1,
+  200
+);
+
+camera.position.set(0, 5, 17);
+camera.lookAt(0, 4, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight - 65);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 root.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xe4f3ff,0x59613b,2));
+// ----------------------------------
+// LIGHTING
+// ----------------------------------
 
-const sun=new THREE.DirectionalLight(0xffe2ad,3);
-sun.position.set(-15,25,12);
-sun.castShadow=true;
+scene.add(
+  new THREE.HemisphereLight(0xe4f3ff, 0x59613b, 2)
+);
+
+const sun = new THREE.DirectionalLight(0xffe2ad, 3);
+sun.position.set(-15, 25, 12);
+sun.castShadow = true;
 scene.add(sun);
 
-const ground=new THREE.Mesh(
-new THREE.PlaneGeometry(200,200),
-new THREE.MeshStandardMaterial({color:0x65734b,roughness:1})
+// ----------------------------------
+// MARSH ENVIRONMENT
+// ----------------------------------
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(200, 200),
+  new THREE.MeshStandardMaterial({
+    color: 0x65734b,
+    roughness: 1
+  })
 );
-ground.rotation.x=-Math.PI/2;
-ground.position.y=-.2;
-ground.receiveShadow=true;
+
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.2;
+ground.receiveShadow = true;
 scene.add(ground);
 
-const water=new THREE.Mesh(
-new THREE.PlaneGeometry(100,100,40,40),
-new THREE.MeshStandardMaterial({color:0x426e76,roughness:.25,metalness:.2})
+const water = new THREE.Mesh(
+  new THREE.PlaneGeometry(100, 100),
+  new THREE.MeshStandardMaterial({
+    color: 0x426e76,
+    roughness: 0.25,
+    metalness: 0.2
+  })
 );
-water.rotation.x=-Math.PI/2;
-water.position.set(0,.03,-5);
+
+water.rotation.x = -Math.PI / 2;
+water.position.set(0, 0.03, -5);
 scene.add(water);
 
-// Reeds around the marsh
-for(let i=0;i<90;i++){
-const reed=new THREE.Mesh(
-new THREE.CylinderGeometry(.025,.055,2+Math.random()*2,6),
-new THREE.MeshStandardMaterial({color:0x687d40})
-);
-reed.position.set((Math.random()-.5)*70,1,-12-Math.random()*30);
-scene.add(reed);
+// Reeds
+for (let i = 0; i < 90; i++) {
+  const reed = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      0.025,
+      0.055,
+      2 + Math.random() * 2,
+      6
+    ),
+    new THREE.MeshStandardMaterial({ color: 0x687d40 })
+  );
+
+  reed.position.set(
+    (Math.random() - 0.5) * 70,
+    1,
+    -12 - Math.random() * 30
+  );
+
+  scene.add(reed);
 }
 
 // Trees
-for(let i=0;i<12;i++){
-const tree=new THREE.Group();
-const trunk=new THREE.Mesh(
-new THREE.CylinderGeometry(.25,.45,4,8),
-new THREE.MeshStandardMaterial({color:0x55402b})
-);
-trunk.position.y=2;
-tree.add(trunk);
+for (let i = 0; i < 12; i++) {
+  const tree = new THREE.Group();
 
-for(let j=0;j<5;j++){
-const leaves=new THREE.Mesh(
-new THREE.SphereGeometry(2,10,8),
-new THREE.MeshStandardMaterial({color:0x365c3c})
-);
-leaves.position.set((Math.random()-.5)*2,4+j*.3,(Math.random()-.5)*2);
-tree.add(leaves);
-}
-tree.position.set((Math.random()-.5)*65,0,-25-Math.random()*20);
-scene.add(tree);
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.45, 4, 8),
+    new THREE.MeshStandardMaterial({ color: 0x55402b })
+  );
+
+  trunk.position.y = 2;
+  tree.add(trunk);
+
+  for (let j = 0; j < 5; j++) {
+    const leaves = new THREE.Mesh(
+      new THREE.SphereGeometry(2, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x365c3c })
+    );
+
+    leaves.position.set(
+      (Math.random() - 0.5) * 2,
+      4 + j * 0.3,
+      (Math.random() - 0.5) * 2
+    );
+
+    tree.add(leaves);
+  }
+
+  tree.position.set(
+    (Math.random() - 0.5) * 65,
+    0,
+    -25 - Math.random() * 20
+  );
+
+  scene.add(tree);
 }
 
-const loader=new GLTFLoader();
-let duckTemplate=null;
-let loading=false;
-let modelError=false;
+// ----------------------------------
+// DUCK MODEL
+// ----------------------------------
+
+let duckTemplate = null;
+
+function makeFallbackDuck() {
+  const duck = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.SphereGeometry(0.8, 24, 16),
+    new THREE.MeshStandardMaterial({ color: 0x795b35 })
+  );
+
+  body.scale.set(1.3, 0.75, 0.75);
+  duck.add(body);
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4, 20, 16),
+    new THREE.MeshStandardMaterial({ color: 0x17613d })
+  );
+
+  head.position.set(0.8, 0.45, 0);
+  duck.add(head);
+
+  const beak = new THREE.Mesh(
+    new THREE.ConeGeometry(0.16, 0.5, 8),
+    new THREE.MeshStandardMaterial({ color: 0xd59a27 })
+  );
+
+  beak.rotation.z = -Math.PI / 2;
+  beak.position.set(1.22, 0.35, 0);
+  duck.add(beak);
+
+  return duck;
+}
+
+function prepareDuck(model) {
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+
+  const largest = Math.max(size.x, size.y, size.z);
+
+  if (!largest || !Number.isFinite(largest)) {
+    throw new Error('The duck model has invalid dimensions.');
+  }
+
+  const scale = 2.2 / largest;
+
+  const holder = new THREE.Group();
+  model.scale.setScalar(scale);
+  model.position.set(
+    -center.x * scale,
+    -center.y * scale,
+    -center.z * scale
+  );
+
+  model.traverse(obj => {
+    if (obj.isMesh) {
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+    }
+  });
+
+  holder.add(model);
+  return holder;
+}
+
+const loader = new GLTFLoader();
 
 loader.load(
-'./duck-light%20(1).glb',
-gltf=>{
-duckTemplate=gltf.scene;
-duckTemplate.updateMatrixWorld(true);
-const box=new THREE.Box3().setFromObject(duckTemplate);
-const size=box.getSize(new THREE.Vector3());
-const center=box.getCenter(new THREE.Vector3());
-const largest=Math.max(size.x,size.y,size.z);
-const scale=2.2/largest;
-duckTemplate.scale.setScalar(scale);
-duckTemplate.position.sub(center.multiplyScalar(scale));
-duckTemplate.traverse(obj=>{
-if(obj.isMesh){
-obj.castShadow=true;
-obj.receiveShadow=true;
-}
-});
-document.querySelector('#message').textContent='Mallard 3D model loaded!';
-},
-undefined,
-error=>{
-console.error('Mallard model failed to load:',error);
-modelError=true;
-document.querySelector('#message').textContent='Model loading error. Check filename.';
-}
+  './duck-light%20%281%29.glb',
+
+  gltf => {
+    try {
+      duckTemplate = prepareDuck(gltf.scene);
+      message.textContent = 'Mallard 3D model loaded!';
+    } catch (error) {
+      console.error(error);
+      duckTemplate = makeFallbackDuck();
+      message.textContent = 'Using backup duck model.';
+    }
+
+    startButton.disabled = false;
+    startButton.textContent = 'START GAME';
+  },
+
+  undefined,
+
+  error => {
+    console.error('Mallard model loading error:', error);
+
+    // Keep the game playable if the model cannot load.
+    duckTemplate = makeFallbackDuck();
+
+    message.textContent = 'Using backup duck model.';
+    startButton.disabled = false;
+    startButton.textContent = 'START GAME';
+  }
 );
 
-const clock=new THREE.Clock();
-const ducks=[];
-let score=0,time=60,round=1,playing=false;
-let timer=null;
+// ----------------------------------
+// GAME VARIABLES
+// ----------------------------------
 
-function spawnDuck(){
-if(!duckTemplate)return;
-const duck=duckTemplate.clone(true);
-duck.position.set(Math.random()<.5?-24:24,4+Math.random()*6,-4-Math.random()*7);
-const direction=duck.position.x<0?1:-1;
-duck.rotation.y=direction===1?0:Math.PI;
-duck.userData.direction=direction;
-duck.userData.speed=4+Math.random()*3;
-duck.userData.phase=Math.random()*6;
-scene.add(duck);
-ducks.push(duck);
-}
+const clock = new THREE.Clock();
+const ducks = [];
 
-function updateDucks(delta){
-for(let i=ducks.length-1;i>=0;i--){
-const duck=ducks[i];
-duck.position.x+=duck.userData.direction*duck.userData.speed*delta;
-duck.position.y+=Math.sin(clock.elapsedTime*3+duck.userData.phase)*.006;
-if(Math.abs(duck.position.x)>32){
-scene.remove(duck);
-ducks.splice(i,1);
-}
-}
-}
+let score = 0;
+let time = 60;
+let round = 1;
+let playing = false;
+let timer = null;
 
-function updateUI(){
-document.querySelector('#score').textContent=score;
-document.querySelector('#time').textContent=time;
-document.querySelector('#round').textContent=round;
-}
+// ----------------------------------
+// SPAWN DUCKS
+// ----------------------------------
 
-function startGame(){
-if(!duckTemplate){
-document.querySelector('#message').textContent='Please wait for the Mallard model to load.';
-return;
-}
-score=0;time=60;round=1;playing=true;
-ducks.forEach(d=>scene.remove(d));
-ducks.length=0;
-for(let i=0;i<4;i++)spawnDuck();
-updateUI();
-document.querySelector('#overlay').style.display='none';
-clearInterval(timer);
-timer=setInterval(()=>{
-if(!playing)return;
-time--;
-if(time<=0)endGame();
-updateUI();
-},1000);
+function spawnDuck() {
+  if (!duckTemplate || !playing) return;
+
+  const duck = duckTemplate.clone(true);
+
+  duck.position.set(
+    Math.random() < 0.5 ? -24 : 24,
+    4 + Math.random() * 6,
+    -4 - Math.random() * 7
+  );
+
+  const direction = duck.position.x < 0 ? 1 : -1;
+
+  duck.rotation.y = direction === 1 ? 0 : Math.PI;
+
+  duck.userData.direction = direction;
+  duck.userData.speed = 4 + Math.random() * 3;
+  duck.userData.phase = Math.random() * 6;
+
+  scene.add(duck);
+  ducks.push(duck);
 }
 
-function endGame(){
-playing=false;
-clearInterval(timer);
-document.querySelector('#overlay').style.display='flex';
-document.querySelector('#heading').textContent='ROUND COMPLETE';
-document.querySelector('#description').textContent='Final score: '+score;
-document.querySelector('#start').textContent='PLAY AGAIN';
-document.querySelector('#message').textContent='Great flying!';
+// ----------------------------------
+// UPDATE DUCKS
+// ----------------------------------
+
+function updateDucks(delta) {
+  for (let i = ducks.length - 1; i >= 0; i--) {
+    const duck = ducks[i];
+
+    duck.position.x +=
+      duck.userData.direction * duck.userData.speed * delta;
+
+    duck.position.y +=
+      Math.sin(clock.elapsedTime * 3 + duck.userData.phase) * 0.006;
+
+    if (Math.abs(duck.position.x) > 32) {
+      scene.remove(duck);
+      ducks.splice(i, 1);
+    }
+  }
 }
 
-document.querySelector('#start').addEventListener('click',startGame);
+// ----------------------------------
+// UPDATE SCORE AND STATS
+// ----------------------------------
 
-const raycaster=new THREE.Raycaster();
-const pointer=new THREE.Vector2();
+function updateUI() {
+  document.querySelector('#score').textContent = score;
+  document.querySelector('#time').textContent = time;
+  document.querySelector('#round').textContent = round;
+}
 
-renderer.domElement.addEventListener('pointerdown',event=>{
-if(!playing)return;
-const rect=renderer.domElement.getBoundingClientRect();
-pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
-pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
-raycaster.setFromCamera(pointer,camera);
-const hits=raycaster.intersectObjects(ducks,true);
-if(hits.length){
-let obj=hits[0].object;
-while(obj.parent&&!ducks.includes(obj))obj=obj.parent;
-if(ducks.includes(obj)){
-scene.remove(obj);
-ducks.splice(ducks.indexOf(obj),1);
-score+=10;
-if(score>=round*150)round++;
-updateUI();
-document.querySelector('#message').textContent='+10 POINTS';
-spawnDuck();
+// ----------------------------------
+// START GAME
+// ----------------------------------
+
+function startGame() {
+  if (!duckTemplate) {
+    message.textContent = 'Please wait for the duck model to load.';
+    return;
+  }
+
+  clearInterval(timer);
+
+  score = 0;
+  time = 60;
+  round = 1;
+  playing = true;
+
+  ducks.forEach(duck => scene.remove(duck));
+  ducks.length = 0;
+
+  for (let i = 0; i < 4; i++) {
+    spawnDuck();
+  }
+
+  updateUI();
+
+  document.querySelector('#overlay').style.display = 'none';
+
+  timer = setInterval(() => {
+    if (!playing) return;
+
+    time--;
+
+    if (time <= 0) {
+      endGame();
+    }
+
+    updateUI();
+  }, 1000);
 }
+
+startButton.addEventListener('click', startGame);
+
+// ----------------------------------
+// END GAME
+// ----------------------------------
+
+function endGame() {
+  playing = false;
+  clearInterval(timer);
+
+  document.querySelector('#overlay').style.display = 'flex';
+  document.querySelector('#heading').textContent = 'ROUND COMPLETE';
+  document.querySelector('#description').textContent =
+    'Final score: ' + score;
+
+  startButton.textContent = 'PLAY AGAIN';
+  message.textContent = 'Great flying!';
 }
+
+// ----------------------------------
+// CLICK TO SCORE
+// ----------------------------------
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+renderer.domElement.addEventListener('pointerdown', event => {
+  if (!playing) return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  const hits = raycaster.intersectObjects(ducks, true);
+
+  if (hits.length) {
+    let obj = hits[0].object;
+
+    while (obj.parent && !ducks.includes(obj)) {
+      obj = obj.parent;
+    }
+
+    if (ducks.includes(obj)) {
+      scene.remove(obj);
+      ducks.splice(ducks.indexOf(obj), 1);
+
+      score += 10;
+
+      if (score >= round * 150) {
+        round++;
+      }
+
+      updateUI();
+      spawnDuck();
+    }
+  }
 });
 
-function animate(){
-requestAnimationFrame(animate);
-const delta=Math.min(clock.getDelta(),.05);
-if(playing){
-updateDucks(delta);
-if(ducks.length<5&&Math.random()<delta*.5)spawnDuck();
+// ----------------------------------
+// ANIMATION
+// ----------------------------------
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const delta = Math.min(clock.getDelta(), 0.05);
+
+  if (playing) {
+    updateDucks(delta);
+
+    if (ducks.length < 5 && Math.random() < delta * 0.5) {
+      spawnDuck();
+    }
+  }
+
+  renderer.render(scene, camera);
 }
-renderer.render(scene,camera);
-}
+
 animate();
 
-addEventListener('resize',()=>{
-camera.aspect=innerWidth/(innerHeight-65);
-camera.updateProjectionMatrix();
-renderer.setSize(innerWidth,innerHeight-65);
+// ----------------------------------
+// RESIZE
+// ----------------------------------
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / (innerHeight - 65);
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(innerWidth, innerHeight - 65);
 });
+
 </script>
 </body>
 </html>
