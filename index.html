@@ -4,513 +4,281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Duck Hunt Elite</title>
-
+<title>Duck Hunt Elite 3D</title>
 <style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: #101b14;
-  color: white;
-  font-family: Arial, sans-serif;
-}
-
-header {
-  text-align: center;
-  padding: 22px 10px;
-  background: #17291c;
-  border-bottom: 2px solid #c9a64b;
-}
-
-header h1 {
-  margin: 0;
-  color: #e3c46b;
-  font-size: 32px;
-  letter-spacing: 2px;
-}
-
-header p {
-  color: #b9c7b9;
-  margin-bottom: 0;
-}
-
-.stats {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 15px;
-}
-
-.stat {
-  background: #203426;
-  border: 1px solid #526b48;
-  border-radius: 10px;
-  padding: 12px 22px;
-  min-width: 105px;
-  text-align: center;
-}
-
-.stat small {
-  display: block;
-  color: #bdcbbd;
-  margin-bottom: 5px;
-}
-
-.stat strong {
-  color: #e6ca73;
-  font-size: 23px;
-}
-
-.game-container {
-  max-width: 1050px;
-  margin: auto;
-  padding: 10px;
-}
-
-#game {
-  display: block;
-  width: 100%;
-  height: 480px;
-  background: #8eb5a1;
-  border: 3px solid #c9a64b;
-  border-radius: 12px;
-  cursor: crosshair;
-  touch-action: manipulation;
-}
-
-.controls {
-  text-align: center;
-  padding: 18px;
-}
-
-button {
-  background: #c9a64b;
-  color: #172318;
-  border: none;
-  padding: 13px 28px;
-  font-weight: bold;
-  font-size: 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #e6ca73;
-}
-
-#message {
-  color: #e6ca73;
-  font-size: 19px;
-  font-weight: bold;
-  margin: 12px;
-}
-
-.instructions {
-  text-align: center;
-  color: #bdcbbd;
-  padding: 10px 20px 30px;
-}
+*{box-sizing:border-box}
+body{margin:0;background:#101a13;color:white;font-family:Arial,sans-serif;overflow:hidden}
+header{height:66px;background:#14251a;border-bottom:2px solid #c9a64b;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+h1{font-size:22px;color:#e4c46d;letter-spacing:2px;margin:0}
+.stats{display:flex;gap:20px;font-weight:bold}
+.stats span{color:#e4c46d}
+#game{width:100%;height:calc(100vh - 66px);display:block;cursor:crosshair}
+#overlay{position:fixed;inset:66px 0 0;background:rgba(5,15,9,.55);display:flex;align-items:center;justify-content:center;text-align:center}
+.panel{background:rgba(16,31,20,.94);border:1px solid #c9a64b;border-radius:15px;padding:32px;width:min(440px,90%)}
+.panel h2{color:#e4c46b;font-size:30px;margin:0 0 12px}
+button{background:#c9a64b;border:0;border-radius:7px;padding:14px 30px;font-size:16px;font-weight:bold;cursor:pointer}
+button:hover{background:#e8d18b}
+#message{color:#e4c46b;margin-top:14px;min-height:22px}
+.hint{color:#bdc7bb;font-size:13px}
+@media(max-width:600px){header{padding:0 10px}h1{font-size:16px}.stats{gap:8px;font-size:12px}}
 </style>
 </head>
-
 <body>
-
 <header>
-  <h1>🦆 DUCK HUNT ELITE</h1>
-  <p>The ultimate duck spotting arcade challenge</p>
-</header>
-
+<h1>🦆 DUCK HUNT ELITE 3D</h1>
 <div class="stats">
-  <div class="stat">
-    <small>SCORE</small>
-    <strong id="score">0</strong>
-  </div>
-
-  <div class="stat">
-    <small>TIME</small>
-    <strong id="time">60</strong>
-  </div>
-
-  <div class="stat">
-    <small>ROUND</small>
-    <strong id="round">1</strong>
-  </div>
-
-  <div class="stat">
-    <small>HIGH SCORE</small>
-    <strong id="high">0</strong>
-  </div>
+<div>SCORE: <span id="score">0</span></div>
+<div>TIME: <span id="time">60</span></div>
+<div>ROUND: <span id="round">1</span></div>
 </div>
-
-<div class="game-container">
-  <canvas id="game" width="1000" height="480"></canvas>
-
-  <div class="controls">
-    <button id="startButton">START GAME</button>
-    <div id="message">Press START GAME to begin!</div>
-  </div>
-
-  <div class="instructions">
-    Click or tap the flying ducks to score points.
-    <br>
-    Find as many ducks as you can before time runs out!
-  </div>
+</header>
+<canvas id="game"></canvas>
+<div id="overlay">
+<div class="panel">
+<h2>DUCK HUNT ELITE</h2>
+<p>Welcome to the marsh.</p>
+<p class="hint">A new 3D hunting arcade experience.</p>
+<button id="start">START GAME</button>
+<div id="message">Click START to begin</div>
 </div>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 
-<script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas=document.querySelector('#game');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9ab9b4);
+scene.fog=new THREE.Fog(0x9ab9b4,35,110);
 
-const scoreDisplay = document.getElementById("score");
-const timeDisplay = document.getElementById("time");
-const roundDisplay = document.getElementById("round");
-const highDisplay = document.getElementById("high");
-const message = document.getElementById("message");
-const startButton = document.getElementById("startButton");
+const camera=new THREE.PerspectiveCamera(65,innerWidth/(innerHeight-66),.1,200);
+camera.position.set(0,4,14);
+camera.lookAt(0,3,0);
 
-let score = 0;
-let timeLeft = 60;
-let round = 1;
-let ducks = [];
-let particles = [];
-let playing = false;
-let lastTime = 0;
-let spawnTimer = 0;
-let animationId = null;
-let highScore = Number(localStorage.getItem("duckEliteHigh") || 0);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setSize(innerWidth,innerHeight-66);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
 
-highDisplay.textContent = highScore;
+scene.add(new THREE.HemisphereLight(0xd9edff,0x53613a,2));
 
-const species = [
-  { name: "Mallard", points: 10, color: "#28734c", rarity: "COMMON" },
-  { name: "Teal", points: 15, color: "#238b9b", rarity: "COMMON" },
-  { name: "Shoveler", points: 20, color: "#a66d42", rarity: "RARE" },
-  { name: "Wigeon", points: 30, color: "#d4b65a", rarity: "EPIC" },
-  { name: "Pintail", points: 50, color: "#eee0c2", rarity: "LEGENDARY" }
-];
+const sun=new THREE.DirectionalLight(0xffe3ae,3);
+sun.position.set(-15,25,12);
+sun.castShadow=true;
+scene.add(sun);
 
-function resizeCanvas() {
-  // Keep the game world at a fixed size for consistent gameplay.
+const ground=new THREE.Mesh(
+new THREE.PlaneGeometry(200,200),
+new THREE.MeshStandardMaterial({color:0x596a3d,roughness:1})
+);
+ground.rotation.x=-Math.PI/2;
+ground.position.y=-.1;
+ground.receiveShadow=true;
+scene.add(ground);
+
+const water=new THREE.Mesh(
+new THREE.PlaneGeometry(100,100,50,50),
+new THREE.MeshStandardMaterial({color:0x416e72,roughness:.25,metalness:.25})
+);
+water.rotation.x=-Math.PI/2;
+water.position.set(0,.05,-5);
+scene.add(water);
+
+const clock=new THREE.Clock();
+const ducks=[];
+const reeds=[];
+let score=0,time=60,round=1,playing=false;
+let timer=null;
+
+function makeReed(x,z){
+const group=new THREE.Group();
+const stem=new THREE.Mesh(
+new THREE.CylinderGeometry(.035,.06,2+Math.random()*2,6),
+new THREE.MeshStandardMaterial({color:0x718044})
+);
+stem.position.y=1;
+group.add(stem);
+group.position.set(x,0,z);
+scene.add(group);
+reeds.push(group);
 }
 
-function makeDuck() {
-  const data = species[Math.floor(Math.random() * species.length)];
-  const direction = Math.random() < 0.5 ? 1 : -1;
-
-  return {
-    x: direction === 1 ? -70 : 1070,
-    y: 85 + Math.random() * 270,
-    speed: (1.5 + Math.random() * 2 + round * 0.35) * direction,
-    size: 0.8 + Math.random() * 0.35,
-    wing: 0,
-    wingDirection: 1,
-    data: data,
-    alive: true
-  };
+for(let i=0;i<100;i++){
+makeReed((Math.random()-.5)*75,-10-Math.random()*35);
 }
 
-function drawBackground() {
-  // Sky
-  const sky = ctx.createLinearGradient(0, 0, 0, 480);
-  sky.addColorStop(0, "#83b8c0");
-  sky.addColorStop(1, "#d6d4a2");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, 1000, 480);
-
-  // Sun
-  ctx.fillStyle = "#f4d889";
-  ctx.beginPath();
-  ctx.arc(820, 85, 38, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Distant hills
-  ctx.fillStyle = "#78916a";
-  ctx.beginPath();
-  ctx.moveTo(0, 270);
-  ctx.quadraticCurveTo(250, 120, 500, 265);
-  ctx.quadraticCurveTo(760, 150, 1000, 260);
-  ctx.lineTo(1000, 480);
-  ctx.lineTo(0, 480);
-  ctx.fill();
-
-  // Water
-  ctx.fillStyle = "#547f83";
-  ctx.fillRect(0, 335, 1000, 145);
-
-  ctx.strokeStyle = "rgba(220,240,220,0.3)";
-  ctx.lineWidth = 2;
-
-  for (let i = 0; i < 12; i++) {
-    const x = (i * 97 + 30) % 1000;
-    const y = 365 + (i % 4) * 27;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 45, y);
-    ctx.stroke();
-  }
-
-  // Reeds
-  for (let i = 0; i < 28; i++) {
-    const x = i * 39;
-    ctx.strokeStyle = "#526b39";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(x, 480);
-    ctx.quadraticCurveTo(x - 8, 405, x + 4, 350 + (i % 3) * 15);
-    ctx.stroke();
-  }
+function makeTree(x,z){
+const group=new THREE.Group();
+const trunk=new THREE.Mesh(
+new THREE.CylinderGeometry(.35,.5,5,8),
+new THREE.MeshStandardMaterial({color:0x51402a})
+);
+trunk.position.y=2.5;
+trunk.castShadow=true;
+group.add(trunk);
+for(let i=0;i<5;i++){
+const leaves=new THREE.Mesh(
+new THREE.SphereGeometry(2+Math.random(),10,8),
+new THREE.MeshStandardMaterial({color:0x3d6340,roughness:1})
+);
+leaves.position.set((Math.random()-.5)*2,4.5+i*.5,(Math.random()-.5)*2);
+leaves.castShadow=true;
+group.add(leaves);
+}
+group.position.set(x,0,z);
+scene.add(group);
 }
 
-function drawDuck(duck) {
-  ctx.save();
-  ctx.translate(duck.x, duck.y);
-  ctx.scale(duck.size, duck.size);
-
-  if (duck.speed < 0) {
-    ctx.scale(-1, 1);
-  }
-
-  // Body
-  ctx.fillStyle = "#e3d4a7";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 31, 17, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Neck and head
-  ctx.fillStyle = duck.data.color;
-  ctx.beginPath();
-  ctx.ellipse(18, -17, 12, 16, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Beak
-  ctx.fillStyle = "#e5a13c";
-  ctx.beginPath();
-  ctx.moveTo(27, -19);
-  ctx.lineTo(43, -15);
-  ctx.lineTo(27, -11);
-  ctx.fill();
-
-  // Eye
-  ctx.fillStyle = "#111";
-  ctx.beginPath();
-  ctx.arc(21, -22, 2.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Animated wing
-  ctx.fillStyle = duck.data.color;
-  ctx.save();
-  ctx.rotate(Math.sin(duck.wing) * 0.5);
-  ctx.beginPath();
-  ctx.ellipse(-5, -7, 22, 8, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Tail
-  ctx.fillStyle = duck.data.color;
-  ctx.beginPath();
-  ctx.moveTo(-25, -4);
-  ctx.lineTo(-42, -15);
-  ctx.lineTo(-35, 2);
-  ctx.fill();
-
-  ctx.restore();
+for(let i=0;i<12;i++){
+makeTree((Math.random()-.5)*65,-28-Math.random()*30);
 }
 
-function drawParticles() {
-  particles.forEach(p => {
-    ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.globalAlpha = 1;
+function createDuck(){
+const duck=new THREE.Group();
+
+const bodyMat=new THREE.MeshStandardMaterial({color:0x9b8155,roughness:.75});
+const greenMat=new THREE.MeshStandardMaterial({color:0x145d42,roughness:.6});
+const wingMat=new THREE.MeshStandardMaterial({color:0x806344,roughness:.8});
+const beakMat=new THREE.MeshStandardMaterial({color:0xe3a33d});
+
+const body=new THREE.Mesh(new THREE.SphereGeometry(.55,20,14),bodyMat);
+body.scale.set(1.3,.7,.7);
+duck.add(body);
+
+const neck=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,.65,12),greenMat);
+neck.position.set(.45,.45,0);
+neck.rotation.z=-.35;
+duck.add(neck);
+
+const head=new THREE.Mesh(new THREE.SphereGeometry(.27,16,12),greenMat);
+head.position.set(.58,.83,0);
+duck.add(head);
+
+const beak=new THREE.Mesh(new THREE.ConeGeometry(.13,.4,8),beakMat);
+beak.rotation.z=-Math.PI/2;
+beak.position.set(.91,.78,0);
+duck.add(beak);
+
+const wing=new THREE.Mesh(new THREE.SphereGeometry(.4,16,10),wingMat);
+wing.scale.set(1,.2,.7);
+wing.position.set(-.12,.22,0);
+duck.add(wing);
+
+const tail=new THREE.Mesh(new THREE.ConeGeometry(.17,.45,8),wingMat);
+tail.rotation.z=Math.PI/2;
+tail.position.set(-.68,.05,0);
+duck.add(tail);
+
+duck.userData={wing,baseY:3+Math.random()*6,phase:Math.random()*6,speed:5+Math.random()*4};
+duck.scale.setScalar(.85+Math.random()*.35);
+scene.add(duck);
+return duck;
 }
 
-function createParticles(x, y, color) {
-  for (let i = 0; i < 12; i++) {
-    particles.push({
-      x: x,
-      y: y,
-      vx: (Math.random() - 0.5) * 7,
-      vy: (Math.random() - 0.5) * 7,
-      size: 2 + Math.random() * 4,
-      color: color,
-      life: 1
-    });
-  }
+function spawnDuck(){
+const duck=createDuck();
+duck.position.set(Math.random()<.5?-25:25,duck.userData.baseY,-3-Math.random()*7);
+duck.rotation.y=duck.position.x<0?0:Math.PI;
+duck.userData.direction=duck.position.x<0?1:-1;
+ducks.push(duck);
 }
 
-function updateParticles(delta) {
-  particles.forEach(p => {
-    p.x += p.vx * delta;
-    p.y += p.vy * delta;
-    p.life -= 0.025 * delta;
-  });
-
-  particles = particles.filter(p => p.life > 0);
+function updateDucks(delta){
+for(let i=ducks.length-1;i>=0;i--){
+const d=ducks[i];
+d.position.x+=d.userData.direction*d.userData.speed*delta;
+d.position.y=d.userData.baseY+Math.sin(clock.elapsedTime*3+d.userData.phase)*.5;
+d.userData.wing.rotation.z=Math.sin(clock.elapsedTime*13+d.userData.phase)*.65;
+d.rotation.z=Math.sin(clock.elapsedTime*2+d.userData.phase)*.08;
+if(Math.abs(d.position.x)>35){
+scene.remove(d);
+ducks.splice(i,1);
+}
+}
 }
 
-function update(delta) {
-  if (!playing) return;
-
-  spawnTimer += delta;
-
-  if (spawnTimer > Math.max(35, 105 - round * 8)) {
-    ducks.push(makeDuck());
-    spawnTimer = 0;
-  }
-
-  ducks.forEach(duck => {
-    duck.x += duck.speed * delta;
-    duck.wing += 0.13 * delta * duck.wingDirection;
-
-    if (duck.wing > 1.2 || duck.wing < -1.2) {
-      duck.wingDirection *= -1;
-    }
-  });
-
-  ducks = ducks.filter(duck =>
-    duck.x > -100 && duck.x < 1100 && duck.alive
-  );
-
-  updateParticles(delta);
+function updateUI(){
+document.querySelector('#score').textContent=score;
+document.querySelector('#time').textContent=time;
+document.querySelector('#round').textContent=round;
 }
 
-function draw() {
-  ctx.clearRect(0, 0, 1000, 480);
-  drawBackground();
-
-  ducks.forEach(drawDuck);
-  drawParticles();
-
-  if (!playing && timeLeft === 60 && score === 0) {
-    ctx.fillStyle = "rgba(10,25,15,0.55)";
-    ctx.fillRect(260, 180, 480, 100);
-    ctx.fillStyle = "#fff";
-    ctx.textAlign = "center";
-    ctx.font = "bold 30px Arial";
-    ctx.fillText("DUCK HUNT ELITE", 500, 222);
-    ctx.font = "18px Arial";
-    ctx.fillText("Press START GAME", 500, 255);
-  }
+function startGame(){
+score=0;time=60;round=1;playing=true;
+ducks.forEach(d=>scene.remove(d));
+ducks.length=0;
+updateUI();
+document.querySelector('#overlay').style.display='none';
+for(let i=0;i<4;i++)spawnDuck();
+clearInterval(timer);
+timer=setInterval(()=>{
+if(!playing)return;
+time--;
+if(time<=0)endGame();
+updateUI();
+},1000);
 }
 
-function gameLoop(timestamp) {
-  if (!playing) return;
-
-  const delta = Math.min((timestamp - lastTime) / 16.67 || 1, 2);
-  lastTime = timestamp;
-
-  update(delta);
-  draw();
-
-  animationId = requestAnimationFrame(gameLoop);
+function endGame(){
+playing=false;
+clearInterval(timer);
+document.querySelector('#overlay').style.display='flex';
+document.querySelector('.panel h2').textContent='ROUND COMPLETE';
+document.querySelector('.panel p').textContent='Final score: '+score;
+document.querySelector('#start').textContent='PLAY AGAIN';
+document.querySelector('#message').textContent='Great flying!';
 }
 
-function startGame() {
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-  }
+document.querySelector('#start').addEventListener('click',()=>{
+document.querySelector('.panel h2').textContent='DUCK HUNT ELITE';
+document.querySelector('.panel p').textContent='Welcome to the marsh.';
+document.querySelector('#message').textContent='Click START to begin';
+startGame();
+});
 
-  score = 0;
-  timeLeft = 60;
-  round = 1;
-  ducks = [];
-  particles = [];
-  spawnTimer = 0;
-  playing = true;
+const raycaster=new THREE.Raycaster();
+const pointer=new THREE.Vector2();
 
-  scoreDisplay.textContent = score;
-  timeDisplay.textContent = timeLeft;
-  roundDisplay.textContent = round;
-  message.textContent = "Find the ducks!";
-  startButton.textContent = "RESTART GAME";
-
-  lastTime = performance.now();
-  animationId = requestAnimationFrame(gameLoop);
+canvas.addEventListener('pointerdown',event=>{
+if(!playing)return;
+const rect=canvas.getBoundingClientRect();
+pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
+pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
+raycaster.setFromCamera(pointer,camera);
+const hits=raycaster.intersectObjects(ducks,true);
+if(hits.length){
+let object=hits[0].object;
+while(object.parent&&!ducks.includes(object))object=object.parent;
+if(ducks.includes(object)){
+scene.remove(object);
+ducks.splice(ducks.indexOf(object),1);
+score+=10;
+if(score>=round*150)round++;
+updateUI();
+document.querySelector('#message').textContent='+10 POINTS';
+spawnDuck();
 }
-
-function endGame() {
-  playing = false;
-
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-
-  if (score > highScore) {
-    highScore = score;
-    localStorage.setItem("duckEliteHigh", highScore);
-    highDisplay.textContent = highScore;
-    message.textContent = "NEW HIGH SCORE! 🏆";
-  } else {
-    message.textContent = "TIME'S UP! Final score: " + score;
-  }
-
-  startButton.textContent = "PLAY AGAIN";
-  draw();
 }
+});
 
-function hitTest(event) {
-  if (!playing) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const x = (event.clientX - rect.left) * 1000 / rect.width;
-  const y = (event.clientY - rect.top) * 480 / rect.height;
-
-  for (let i = ducks.length - 1; i >= 0; i--) {
-    const duck = ducks[i];
-    const dx = x - duck.x;
-    const dy = y - duck.y;
-
-    if (
-      Math.abs(dx) < 43 * duck.size &&
-      Math.abs(dy) < 34 * duck.size
-    ) {
-      score += duck.data.points;
-      scoreDisplay.textContent = score;
-
-      createParticles(duck.x, duck.y, duck.data.color);
-
-      message.textContent =
-        duck.data.rarity + " " + duck.data.name +
-        "  +" + duck.data.points + " POINTS";
-
-      ducks.splice(i, 1);
-
-      if (score >= round * 150) {
-        round++;
-        roundDisplay.textContent = round;
-        message.textContent = "ROUND " + round + "!";
-      }
-
-      return;
-    }
-  }
+function animate(){
+requestAnimationFrame(animate);
+const delta=Math.min(clock.getDelta(),.05);
+if(playing){
+updateDucks(delta);
+if(ducks.length<5&&Math.random()<delta*.6)spawnDuck();
 }
+water.position.z=-5+Math.sin(clock.elapsedTime*.3)*.15;
+renderer.render(scene,camera);
+}
+animate();
 
-canvas.addEventListener("pointerdown", hitTest);
-
-startButton.addEventListener("click", startGame);
-
-setInterval(() => {
-  if (playing) {
-    timeLeft--;
-    timeDisplay.textContent = timeLeft;
-
-    if (timeLeft <= 0) {
-      endGame();
-    }
-  }
-}, 1000);
-
-draw();
+addEventListener('resize',()=>{
+camera.aspect=innerWidth/(innerHeight-66);
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight-66);
+});
 </script>
-
 </body>
 </html>
