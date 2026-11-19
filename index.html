@@ -3,196 +3,179 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Duck Hunt Elite 3D</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#101a13;color:white;font-family:Arial,sans-serif;overflow:hidden}
-header{height:66px;background:#14251a;border-bottom:2px solid #c9a64b;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
-h1{font-size:22px;color:#e4c46d;letter-spacing:2px;margin:0}
-.stats{display:flex;gap:20px;font-weight:bold}
-.stats span{color:#e4c46d}
-#game{width:100%;height:calc(100vh - 66px);display:block;cursor:crosshair}
-#overlay{position:fixed;inset:66px 0 0;background:rgba(5,15,9,.55);display:flex;align-items:center;justify-content:center;text-align:center}
-.panel{background:rgba(16,31,20,.94);border:1px solid #c9a64b;border-radius:15px;padding:32px;width:min(440px,90%)}
-.panel h2{color:#e4c46b;font-size:30px;margin:0 0 12px}
-button{background:#c9a64b;border:0;border-radius:7px;padding:14px 30px;font-size:16px;font-weight:bold;cursor:pointer}
-button:hover{background:#e8d18b}
-#message{color:#e4c46b;margin-top:14px;min-height:22px}
-.hint{color:#bdc7bb;font-size:13px}
-@media(max-width:600px){header{padding:0 10px}h1{font-size:16px}.stats{gap:8px;font-size:12px}}
+body{margin:0;background:#101b14;color:white;font-family:Arial}
+header{height:65px;background:#14251a;border-bottom:2px solid #c9a64b;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+h1{color:#e4c46b;font-size:20px}
+.stats{display:flex;gap:18px;font-weight:bold}
+.stats span{color:#e4c46b}
+canvas{display:block;width:100%;height:calc(100vh - 65px)}
+#overlay{position:fixed;inset:65px 0 0;background:#07120bbd;display:flex;align-items:center;justify-content:center;text-align:center}
+.panel{background:#182d20;border:1px solid #c9a64b;border-radius:15px;padding:30px;width:min(400px,90%)}
+.panel h2{color:#e4c46b}
+button{background:#c9a64b;border:0;border-radius:7px;padding:14px 28px;font-size:16px;font-weight:bold;cursor:pointer}
+#message{color:#e4c46b;margin-top:15px}
 </style>
 </head>
 <body>
 <header>
-<h1>🦆 DUCK HUNT ELITE 3D</h1>
+<h1>🦆 DUCK HUNT ELITE</h1>
 <div class="stats">
 <div>SCORE: <span id="score">0</span></div>
 <div>TIME: <span id="time">60</span></div>
 <div>ROUND: <span id="round">1</span></div>
 </div>
 </header>
-<canvas id="game"></canvas>
+
+<div id="game"></div>
+
 <div id="overlay">
 <div class="panel">
-<h2>DUCK HUNT ELITE</h2>
-<p>Welcome to the marsh.</p>
-<p class="hint">A new 3D hunting arcade experience.</p>
+<h2 id="heading">DUCK HUNT ELITE</h2>
+<p id="description">Welcome to the marsh.</p>
 <button id="start">START GAME</button>
-<div id="message">Click START to begin</div>
+<div id="message">Your Mallard 3D model is ready to load.</div>
 </div>
 </div>
+
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
 
-const canvas=document.querySelector('#game');
+const root=document.querySelector('#game');
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x9ab9b4);
-scene.fog=new THREE.Fog(0x9ab9b4,35,110);
+scene.background=new THREE.Color(0x9bb9b6);
+scene.fog=new THREE.Fog(0x9bb9b6,35,110);
 
-const camera=new THREE.PerspectiveCamera(65,innerWidth/(innerHeight-66),.1,200);
-camera.position.set(0,4,14);
-camera.lookAt(0,3,0);
+const camera=new THREE.PerspectiveCamera(60,innerWidth/(innerHeight-65),.1,200);
+camera.position.set(0,5,17);
+camera.lookAt(0,4,0);
 
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setSize(innerWidth,innerHeight-66);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight-65);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
+root.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xd9edff,0x53613a,2));
+scene.add(new THREE.HemisphereLight(0xe4f3ff,0x59613b,2));
 
-const sun=new THREE.DirectionalLight(0xffe3ae,3);
+const sun=new THREE.DirectionalLight(0xffe2ad,3);
 sun.position.set(-15,25,12);
 sun.castShadow=true;
 scene.add(sun);
 
 const ground=new THREE.Mesh(
 new THREE.PlaneGeometry(200,200),
-new THREE.MeshStandardMaterial({color:0x596a3d,roughness:1})
+new THREE.MeshStandardMaterial({color:0x65734b,roughness:1})
 );
 ground.rotation.x=-Math.PI/2;
-ground.position.y=-.1;
+ground.position.y=-.2;
 ground.receiveShadow=true;
 scene.add(ground);
 
 const water=new THREE.Mesh(
-new THREE.PlaneGeometry(100,100,50,50),
-new THREE.MeshStandardMaterial({color:0x416e72,roughness:.25,metalness:.25})
+new THREE.PlaneGeometry(100,100,40,40),
+new THREE.MeshStandardMaterial({color:0x426e76,roughness:.25,metalness:.2})
 );
 water.rotation.x=-Math.PI/2;
-water.position.set(0,.05,-5);
+water.position.set(0,.03,-5);
 scene.add(water);
+
+// Reeds around the marsh
+for(let i=0;i<90;i++){
+const reed=new THREE.Mesh(
+new THREE.CylinderGeometry(.025,.055,2+Math.random()*2,6),
+new THREE.MeshStandardMaterial({color:0x687d40})
+);
+reed.position.set((Math.random()-.5)*70,1,-12-Math.random()*30);
+scene.add(reed);
+}
+
+// Trees
+for(let i=0;i<12;i++){
+const tree=new THREE.Group();
+const trunk=new THREE.Mesh(
+new THREE.CylinderGeometry(.25,.45,4,8),
+new THREE.MeshStandardMaterial({color:0x55402b})
+);
+trunk.position.y=2;
+tree.add(trunk);
+
+for(let j=0;j<5;j++){
+const leaves=new THREE.Mesh(
+new THREE.SphereGeometry(2,10,8),
+new THREE.MeshStandardMaterial({color:0x365c3c})
+);
+leaves.position.set((Math.random()-.5)*2,4+j*.3,(Math.random()-.5)*2);
+tree.add(leaves);
+}
+tree.position.set((Math.random()-.5)*65,0,-25-Math.random()*20);
+scene.add(tree);
+}
+
+const loader=new GLTFLoader();
+let duckTemplate=null;
+let loading=false;
+let modelError=false;
+
+loader.load(
+'./duck-light%20(1).glb',
+gltf=>{
+duckTemplate=gltf.scene;
+duckTemplate.updateMatrixWorld(true);
+const box=new THREE.Box3().setFromObject(duckTemplate);
+const size=box.getSize(new THREE.Vector3());
+const center=box.getCenter(new THREE.Vector3());
+const largest=Math.max(size.x,size.y,size.z);
+const scale=2.2/largest;
+duckTemplate.scale.setScalar(scale);
+duckTemplate.position.sub(center.multiplyScalar(scale));
+duckTemplate.traverse(obj=>{
+if(obj.isMesh){
+obj.castShadow=true;
+obj.receiveShadow=true;
+}
+});
+document.querySelector('#message').textContent='Mallard 3D model loaded!';
+},
+undefined,
+error=>{
+console.error('Mallard model failed to load:',error);
+modelError=true;
+document.querySelector('#message').textContent='Model loading error. Check filename.';
+}
+);
 
 const clock=new THREE.Clock();
 const ducks=[];
-const reeds=[];
 let score=0,time=60,round=1,playing=false;
 let timer=null;
 
-function makeReed(x,z){
-const group=new THREE.Group();
-const stem=new THREE.Mesh(
-new THREE.CylinderGeometry(.035,.06,2+Math.random()*2,6),
-new THREE.MeshStandardMaterial({color:0x718044})
-);
-stem.position.y=1;
-group.add(stem);
-group.position.set(x,0,z);
-scene.add(group);
-reeds.push(group);
-}
-
-for(let i=0;i<100;i++){
-makeReed((Math.random()-.5)*75,-10-Math.random()*35);
-}
-
-function makeTree(x,z){
-const group=new THREE.Group();
-const trunk=new THREE.Mesh(
-new THREE.CylinderGeometry(.35,.5,5,8),
-new THREE.MeshStandardMaterial({color:0x51402a})
-);
-trunk.position.y=2.5;
-trunk.castShadow=true;
-group.add(trunk);
-for(let i=0;i<5;i++){
-const leaves=new THREE.Mesh(
-new THREE.SphereGeometry(2+Math.random(),10,8),
-new THREE.MeshStandardMaterial({color:0x3d6340,roughness:1})
-);
-leaves.position.set((Math.random()-.5)*2,4.5+i*.5,(Math.random()-.5)*2);
-leaves.castShadow=true;
-group.add(leaves);
-}
-group.position.set(x,0,z);
-scene.add(group);
-}
-
-for(let i=0;i<12;i++){
-makeTree((Math.random()-.5)*65,-28-Math.random()*30);
-}
-
-function createDuck(){
-const duck=new THREE.Group();
-
-const bodyMat=new THREE.MeshStandardMaterial({color:0x9b8155,roughness:.75});
-const greenMat=new THREE.MeshStandardMaterial({color:0x145d42,roughness:.6});
-const wingMat=new THREE.MeshStandardMaterial({color:0x806344,roughness:.8});
-const beakMat=new THREE.MeshStandardMaterial({color:0xe3a33d});
-
-const body=new THREE.Mesh(new THREE.SphereGeometry(.55,20,14),bodyMat);
-body.scale.set(1.3,.7,.7);
-duck.add(body);
-
-const neck=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,.65,12),greenMat);
-neck.position.set(.45,.45,0);
-neck.rotation.z=-.35;
-duck.add(neck);
-
-const head=new THREE.Mesh(new THREE.SphereGeometry(.27,16,12),greenMat);
-head.position.set(.58,.83,0);
-duck.add(head);
-
-const beak=new THREE.Mesh(new THREE.ConeGeometry(.13,.4,8),beakMat);
-beak.rotation.z=-Math.PI/2;
-beak.position.set(.91,.78,0);
-duck.add(beak);
-
-const wing=new THREE.Mesh(new THREE.SphereGeometry(.4,16,10),wingMat);
-wing.scale.set(1,.2,.7);
-wing.position.set(-.12,.22,0);
-duck.add(wing);
-
-const tail=new THREE.Mesh(new THREE.ConeGeometry(.17,.45,8),wingMat);
-tail.rotation.z=Math.PI/2;
-tail.position.set(-.68,.05,0);
-duck.add(tail);
-
-duck.userData={wing,baseY:3+Math.random()*6,phase:Math.random()*6,speed:5+Math.random()*4};
-duck.scale.setScalar(.85+Math.random()*.35);
-scene.add(duck);
-return duck;
-}
-
 function spawnDuck(){
-const duck=createDuck();
-duck.position.set(Math.random()<.5?-25:25,duck.userData.baseY,-3-Math.random()*7);
-duck.rotation.y=duck.position.x<0?0:Math.PI;
-duck.userData.direction=duck.position.x<0?1:-1;
+if(!duckTemplate)return;
+const duck=duckTemplate.clone(true);
+duck.position.set(Math.random()<.5?-24:24,4+Math.random()*6,-4-Math.random()*7);
+const direction=duck.position.x<0?1:-1;
+duck.rotation.y=direction===1?0:Math.PI;
+duck.userData.direction=direction;
+duck.userData.speed=4+Math.random()*3;
+duck.userData.phase=Math.random()*6;
+scene.add(duck);
 ducks.push(duck);
 }
 
 function updateDucks(delta){
 for(let i=ducks.length-1;i>=0;i--){
-const d=ducks[i];
-d.position.x+=d.userData.direction*d.userData.speed*delta;
-d.position.y=d.userData.baseY+Math.sin(clock.elapsedTime*3+d.userData.phase)*.5;
-d.userData.wing.rotation.z=Math.sin(clock.elapsedTime*13+d.userData.phase)*.65;
-d.rotation.z=Math.sin(clock.elapsedTime*2+d.userData.phase)*.08;
-if(Math.abs(d.position.x)>35){
-scene.remove(d);
+const duck=ducks[i];
+duck.position.x+=duck.userData.direction*duck.userData.speed*delta;
+duck.position.y+=Math.sin(clock.elapsedTime*3+duck.userData.phase)*.006;
+if(Math.abs(duck.position.x)>32){
+scene.remove(duck);
 ducks.splice(i,1);
 }
 }
@@ -205,12 +188,16 @@ document.querySelector('#round').textContent=round;
 }
 
 function startGame(){
+if(!duckTemplate){
+document.querySelector('#message').textContent='Please wait for the Mallard model to load.';
+return;
+}
 score=0;time=60;round=1;playing=true;
 ducks.forEach(d=>scene.remove(d));
 ducks.length=0;
+for(let i=0;i<4;i++)spawnDuck();
 updateUI();
 document.querySelector('#overlay').style.display='none';
-for(let i=0;i<4;i++)spawnDuck();
 clearInterval(timer);
 timer=setInterval(()=>{
 if(!playing)return;
@@ -224,35 +211,30 @@ function endGame(){
 playing=false;
 clearInterval(timer);
 document.querySelector('#overlay').style.display='flex';
-document.querySelector('.panel h2').textContent='ROUND COMPLETE';
-document.querySelector('.panel p').textContent='Final score: '+score;
+document.querySelector('#heading').textContent='ROUND COMPLETE';
+document.querySelector('#description').textContent='Final score: '+score;
 document.querySelector('#start').textContent='PLAY AGAIN';
 document.querySelector('#message').textContent='Great flying!';
 }
 
-document.querySelector('#start').addEventListener('click',()=>{
-document.querySelector('.panel h2').textContent='DUCK HUNT ELITE';
-document.querySelector('.panel p').textContent='Welcome to the marsh.';
-document.querySelector('#message').textContent='Click START to begin';
-startGame();
-});
+document.querySelector('#start').addEventListener('click',startGame);
 
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
 
-canvas.addEventListener('pointerdown',event=>{
+renderer.domElement.addEventListener('pointerdown',event=>{
 if(!playing)return;
-const rect=canvas.getBoundingClientRect();
+const rect=renderer.domElement.getBoundingClientRect();
 pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
 pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
 raycaster.setFromCamera(pointer,camera);
 const hits=raycaster.intersectObjects(ducks,true);
 if(hits.length){
-let object=hits[0].object;
-while(object.parent&&!ducks.includes(object))object=object.parent;
-if(ducks.includes(object)){
-scene.remove(object);
-ducks.splice(ducks.indexOf(object),1);
+let obj=hits[0].object;
+while(obj.parent&&!ducks.includes(obj))obj=obj.parent;
+if(ducks.includes(obj)){
+scene.remove(obj);
+ducks.splice(ducks.indexOf(obj),1);
 score+=10;
 if(score>=round*150)round++;
 updateUI();
@@ -267,17 +249,16 @@ requestAnimationFrame(animate);
 const delta=Math.min(clock.getDelta(),.05);
 if(playing){
 updateDucks(delta);
-if(ducks.length<5&&Math.random()<delta*.6)spawnDuck();
+if(ducks.length<5&&Math.random()<delta*.5)spawnDuck();
 }
-water.position.z=-5+Math.sin(clock.elapsedTime*.3)*.15;
 renderer.render(scene,camera);
 }
 animate();
 
 addEventListener('resize',()=>{
-camera.aspect=innerWidth/(innerHeight-66);
+camera.aspect=innerWidth/(innerHeight-65);
 camera.updateProjectionMatrix();
-renderer.setSize(innerWidth,innerHeight-66);
+renderer.setSize(innerWidth,innerHeight-65);
 });
 </script>
 </body>
