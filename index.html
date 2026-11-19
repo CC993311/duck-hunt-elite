@@ -26,7 +26,7 @@ header {
   justify-content: space-between;
   padding: 0 20px;
   position: relative;
-  z-index: 2;
+  z-index: 5;
 }
 
 h1 {
@@ -45,13 +45,61 @@ h1 {
 #game {
   width: 100%;
   height: calc(100vh - 65px);
+  position: relative;
 }
 
 canvas {
   display: block;
   width: 100%;
   height: 100%;
-  cursor: crosshair;
+  cursor: none;
+}
+
+/* Gold aiming crosshair */
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 4;
+  display: none;
+  filter: drop-shadow(0 0 3px black);
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: #f1d16d;
+  border: 1px solid #30240b;
+}
+
+#crosshair::before {
+  width: 2px;
+  height: 34px;
+  left: 16px;
+  top: 0;
+}
+
+#crosshair::after {
+  width: 34px;
+  height: 2px;
+  left: 0;
+  top: 16px;
+}
+
+#crosshair .center {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #30240b;
+  background: #f1d16d;
+  border-radius: 50%;
+  left: 14px;
+  top: 14px;
 }
 
 #overlay {
@@ -62,7 +110,7 @@ canvas {
   align-items: center;
   justify-content: center;
   text-align: center;
-  z-index: 3;
+  z-index: 6;
 }
 
 .panel {
@@ -70,7 +118,7 @@ canvas {
   border: 1px solid #c9a64b;
   border-radius: 15px;
   padding: 30px;
-  width: min(400px, 90%);
+  width: min(420px, 90%);
 }
 
 .panel h2 { color: #e4c46b; }
@@ -85,11 +133,6 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
-  opacity: .5;
-  cursor: wait;
-}
-
 #message {
   color: #e4c46b;
   margin-top: 15px;
@@ -97,12 +140,10 @@ button:disabled {
 }
 </style>
 
-<!-- Import map: connects Three.js and its model loader -->
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
   }
 }
 </script>
@@ -121,27 +162,30 @@ button:disabled {
 
 <div id="game"></div>
 
+<div id="crosshair"><div class="center"></div></div>
+
 <div id="overlay">
   <div class="panel">
     <h2 id="heading">DUCK HUNT ELITE</h2>
     <p id="description">Welcome to the marsh.</p>
-    <button id="start" disabled>LOADING...</button>
-    <div id="message">Loading your Mallard 3D model...</div>
+    <button id="start">START GAME</button>
+    <div id="message">18 duck and goose species available</div>
   </div>
 </div>
 
 <script type="module">
 
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// ----------------------------------
-// BASIC SETUP
-// ----------------------------------
+// ------------------------------------
+// SETUP
+// ------------------------------------
 
 const root = document.querySelector('#game');
-const message = document.querySelector('#message');
+const overlay = document.querySelector('#overlay');
+const crosshair = document.querySelector('#crosshair');
 const startButton = document.querySelector('#start');
+const message = document.querySelector('#message');
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9bb9b6);
@@ -164,9 +208,9 @@ renderer.shadowMap.enabled = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 root.appendChild(renderer.domElement);
 
-// ----------------------------------
+// ------------------------------------
 // LIGHTING
-// ----------------------------------
+// ------------------------------------
 
 scene.add(
   new THREE.HemisphereLight(0xe4f3ff, 0x59613b, 2)
@@ -177,9 +221,9 @@ sun.position.set(-15, 25, 12);
 sun.castShadow = true;
 scene.add(sun);
 
-// ----------------------------------
-// MARSH ENVIRONMENT
-// ----------------------------------
+// ------------------------------------
+// MARSH
+// ------------------------------------
 
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(200, 200),
@@ -208,13 +252,10 @@ water.position.set(0, 0.03, -5);
 scene.add(water);
 
 // Reeds
-for (let i = 0; i < 90; i++) {
+for (let i = 0; i < 100; i++) {
   const reed = new THREE.Mesh(
     new THREE.CylinderGeometry(
-      0.025,
-      0.055,
-      2 + Math.random() * 2,
-      6
+      0.025, 0.055, 2 + Math.random() * 2, 6
     ),
     new THREE.MeshStandardMaterial({ color: 0x687d40 })
   );
@@ -264,111 +305,149 @@ for (let i = 0; i < 12; i++) {
   scene.add(tree);
 }
 
-// ----------------------------------
-// DUCK MODEL
-// ----------------------------------
+// ------------------------------------
+// SPECIES COLLECTION
+// ------------------------------------
 
-let duckTemplate = null;
+const species = [
+  { name: 'Mallard', body: 0x765437, head: 0x14613b, bill: 0xe5aa28, wing: 0x54402e },
+  { name: 'Northern Pintail', body: 0x967e61, head: 0x292d28, bill: 0x30302b, wing: 0x8a8172 },
+  { name: 'Green-winged Teal', body: 0x92765c, head: 0x14513a, bill: 0x292929, wing: 0x315b4b },
+  { name: 'Blue-winged Teal', body: 0x92765c, head: 0x4b5149, bill: 0x292929, wing: 0x557f9d },
+  { name: 'Northern Shoveler', body: 0x9b815d, head: 0x176044, bill: 0x292929, wing: 0x567b91 },
+  { name: 'Gadwall', body: 0x898477, head: 0x6e5949, bill: 0x333333, wing: 0x8c918c },
+  { name: 'American Wigeon', body: 0x967c61, head: 0x6b403b, bill: 0x303030, wing: 0x9d9b91 },
+  { name: 'Cinnamon Teal', body: 0x9a4e2f, head: 0x9a4e2f, bill: 0x292929, wing: 0x78452e },
+  { name: 'Canvasback', body: 0x9d826c, head: 0x8c3029, bill: 0x292929, wing: 0x8e8a80 },
+  { name: 'Redhead', body: 0x98785e, head: 0x9a4931, bill: 0x303030, wing: 0x77716b },
+  { name: 'Lesser Scaup', body: 0x44464a, head: 0x20242b, bill: 0x343c43, wing: 0x55565a },
+  { name: 'Ring-necked Duck', body: 0x25282b, head: 0x15191b, bill: 0x555d58, wing: 0x383b3d },
+  { name: 'Bufflehead', body: 0x252b32, head: 0x202b39, bill: 0x303030, wing: 0xf0eee7 },
+  { name: 'Common Goldeneye', body: 0xeee8d7, head: 0x20272e, bill: 0x343434, wing: 0xeee8d7 },
+  { name: 'Snow Goose', body: 0xf0eee7, head: 0xf0eee7, bill: 0xb84b32, wing: 0xf0eee7 },
+  { name: 'Canada Goose', body: 0x51483d, head: 0x202522, bill: 0x252525, wing: 0x4c453d },
+  { name: 'Greater White-fronted Goose', body: 0x777064, head: 0x665d51, bill: 0xd27b38, wing: 0x65594c },
+  { name: "Ross's Goose", body: 0xf3eee2, head: 0xf3eee2, bill: 0xd66c50, wing: 0xf3eee2 }
+];
 
-function makeFallbackDuck() {
-  const duck = new THREE.Group();
+// ------------------------------------
+// CREATE 3D BIRD
+// ------------------------------------
 
+function createBird(type) {
+  const bird = new THREE.Group();
+
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: type.body,
+    roughness: 0.85
+  });
+
+  const headMaterial = new THREE.MeshStandardMaterial({
+    color: type.head,
+    roughness: 0.8
+  });
+
+  const wingMaterial = new THREE.MeshStandardMaterial({
+    color: type.wing,
+    roughness: 0.85
+  });
+
+  const billMaterial = new THREE.MeshStandardMaterial({
+    color: type.bill,
+    roughness: 0.7
+  });
+
+  // Body
   const body = new THREE.Mesh(
     new THREE.SphereGeometry(0.8, 24, 16),
-    new THREE.MeshStandardMaterial({ color: 0x795b35 })
+    bodyMaterial
   );
 
-  body.scale.set(1.3, 0.75, 0.75);
-  duck.add(body);
+  body.scale.set(1.3, 0.72, 0.75);
+  bird.add(body);
 
+  // Head
   const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.4, 20, 16),
-    new THREE.MeshStandardMaterial({ color: 0x17613d })
+    new THREE.SphereGeometry(0.38, 20, 16),
+    headMaterial
   );
 
-  head.position.set(0.8, 0.45, 0);
-  duck.add(head);
+  head.position.set(0.82, 0.43, 0);
+  bird.add(head);
 
-  const beak = new THREE.Mesh(
-    new THREE.ConeGeometry(0.16, 0.5, 8),
-    new THREE.MeshStandardMaterial({ color: 0xd59a27 })
+  // Beak
+  const bill = new THREE.Mesh(
+    new THREE.ConeGeometry(0.15, 0.48, 8),
+    billMaterial
   );
 
-  beak.rotation.z = -Math.PI / 2;
-  beak.position.set(1.22, 0.35, 0);
-  duck.add(beak);
+  bill.rotation.z = -Math.PI / 2;
+  bill.position.set(1.2, 0.32, 0);
+  bird.add(bill);
 
-  return duck;
-}
+  // Eyes
+  const eyeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x080808
+  });
 
-function prepareDuck(model) {
-  const box = new THREE.Box3().setFromObject(model);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 10, 10),
+      eyeMaterial
+    );
 
-  const largest = Math.max(size.x, size.y, size.z);
-
-  if (!largest || !Number.isFinite(largest)) {
-    throw new Error('The duck model has invalid dimensions.');
+    eye.position.set(0.94, 0.49, side * 0.31);
+    bird.add(eye);
   }
 
-  const scale = 2.2 / largest;
-
-  const holder = new THREE.Group();
-  model.scale.setScalar(scale);
-  model.position.set(
-    -center.x * scale,
-    -center.y * scale,
-    -center.z * scale
+  // Tail
+  const tail = new THREE.Mesh(
+    new THREE.ConeGeometry(0.23, 0.6, 8),
+    bodyMaterial
   );
 
-  model.traverse(obj => {
+  tail.rotation.z = Math.PI / 2;
+  tail.position.set(-1.05, 0.18, 0);
+  bird.add(tail);
+
+  // Animated wings
+  const wings = [];
+
+  for (const side of [-1, 1]) {
+    const pivot = new THREE.Group();
+
+    pivot.position.set(-0.05, 0.2, side * 0.35);
+
+    const wing = new THREE.Mesh(
+      new THREE.SphereGeometry(0.7, 16, 12),
+      wingMaterial
+    );
+
+    wing.scale.set(0.9, 0.13, 0.55);
+    wing.position.set(-0.05, 0, side * 0.28);
+
+    pivot.add(wing);
+    bird.add(pivot);
+    wings.push({ pivot, side });
+  }
+
+  bird.userData.wings = wings;
+  bird.userData.phase = Math.random() * Math.PI * 2;
+  bird.userData.species = type.name;
+
+  bird.traverse(obj => {
     if (obj.isMesh) {
       obj.castShadow = true;
       obj.receiveShadow = true;
     }
   });
 
-  holder.add(model);
-  return holder;
+  return bird;
 }
 
-const loader = new GLTFLoader();
-
-loader.load(
-  './duck-light%20%281%29.glb',
-
-  gltf => {
-    try {
-      duckTemplate = prepareDuck(gltf.scene);
-      message.textContent = 'Mallard 3D model loaded!';
-    } catch (error) {
-      console.error(error);
-      duckTemplate = makeFallbackDuck();
-      message.textContent = 'Using backup duck model.';
-    }
-
-    startButton.disabled = false;
-    startButton.textContent = 'START GAME';
-  },
-
-  undefined,
-
-  error => {
-    console.error('Mallard model loading error:', error);
-
-    // Keep the game playable if the model cannot load.
-    duckTemplate = makeFallbackDuck();
-
-    message.textContent = 'Using backup duck model.';
-    startButton.disabled = false;
-    startButton.textContent = 'START GAME';
-  }
-);
-
-// ----------------------------------
+// ------------------------------------
 // GAME VARIABLES
-// ----------------------------------
+// ------------------------------------
 
 const clock = new THREE.Clock();
 const ducks = [];
@@ -378,23 +457,25 @@ let time = 60;
 let round = 1;
 let playing = false;
 let timer = null;
+let spawnCount = 0;
 
-// ----------------------------------
-// SPAWN DUCKS
-// ----------------------------------
+// ------------------------------------
+// SPAWN BIRD
+// ------------------------------------
 
 function spawnDuck() {
-  if (!duckTemplate || !playing) return;
+  if (!playing) return;
 
-  const duck = duckTemplate.clone(true);
+  const type = species[Math.floor(Math.random() * species.length)];
+  const duck = createBird(type);
+
+  const direction = Math.random() < 0.5 ? 1 : -1;
 
   duck.position.set(
-    Math.random() < 0.5 ? -24 : 24,
+    direction === 1 ? -24 : 24,
     4 + Math.random() * 6,
     -4 - Math.random() * 7
   );
-
-  const direction = duck.position.x < 0 ? 1 : -1;
 
   duck.rotation.y = direction === 1 ? 0 : Math.PI;
 
@@ -404,21 +485,38 @@ function spawnDuck() {
 
   scene.add(duck);
   ducks.push(duck);
+  spawnCount++;
+
+  message.textContent = 'Flying: ' + type.name;
 }
 
-// ----------------------------------
-// UPDATE DUCKS
-// ----------------------------------
+// ------------------------------------
+// UPDATE BIRDS AND FLAPPING WINGS
+// ------------------------------------
 
 function updateDucks(delta) {
+  const elapsed = clock.elapsedTime;
+
   for (let i = ducks.length - 1; i >= 0; i--) {
     const duck = ducks[i];
 
     duck.position.x +=
       duck.userData.direction * duck.userData.speed * delta;
 
-    duck.position.y +=
-      Math.sin(clock.elapsedTime * 3 + duck.userData.phase) * 0.006;
+    duck.position.y =
+      duck.userData.baseY ||
+      duck.position.y + Math.sin(elapsed * 2 + duck.userData.phase) * delta * 0.5;
+
+    // Wing flapping animation
+    const flap = Math.sin(elapsed * 12 + duck.userData.phase) * 0.85;
+
+    duck.userData.wings.forEach(wing => {
+      wing.pivot.rotation.x = flap * wing.side;
+    });
+
+    // Gentle flight movement
+    duck.rotation.z =
+      Math.sin(elapsed * 2 + duck.userData.phase) * 0.035;
 
     if (Math.abs(duck.position.x) > 32) {
       scene.remove(duck);
@@ -427,9 +525,9 @@ function updateDucks(delta) {
   }
 }
 
-// ----------------------------------
-// UPDATE SCORE AND STATS
-// ----------------------------------
+// ------------------------------------
+// UPDATE SCORE
+// ------------------------------------
 
 function updateUI() {
   document.querySelector('#score').textContent = score;
@@ -437,16 +535,11 @@ function updateUI() {
   document.querySelector('#round').textContent = round;
 }
 
-// ----------------------------------
+// ------------------------------------
 // START GAME
-// ----------------------------------
+// ------------------------------------
 
 function startGame() {
-  if (!duckTemplate) {
-    message.textContent = 'Please wait for the duck model to load.';
-    return;
-  }
-
   clearInterval(timer);
 
   score = 0;
@@ -463,7 +556,8 @@ function startGame() {
 
   updateUI();
 
-  document.querySelector('#overlay').style.display = 'none';
+  overlay.style.display = 'none';
+  crosshair.style.display = 'block';
 
   timer = setInterval(() => {
     if (!playing) return;
@@ -480,15 +574,17 @@ function startGame() {
 
 startButton.addEventListener('click', startGame);
 
-// ----------------------------------
+// ------------------------------------
 // END GAME
-// ----------------------------------
+// ------------------------------------
 
 function endGame() {
   playing = false;
   clearInterval(timer);
 
-  document.querySelector('#overlay').style.display = 'flex';
+  overlay.style.display = 'flex';
+  crosshair.style.display = 'none';
+
   document.querySelector('#heading').textContent = 'ROUND COMPLETE';
   document.querySelector('#description').textContent =
     'Final score: ' + score;
@@ -497,9 +593,18 @@ function endGame() {
   message.textContent = 'Great flying!';
 }
 
-// ----------------------------------
-// CLICK TO SCORE
-// ----------------------------------
+// ------------------------------------
+// CROSSHAIR TRACKING
+// ------------------------------------
+
+renderer.domElement.addEventListener('pointermove', event => {
+  crosshair.style.left = event.clientX + 'px';
+  crosshair.style.top = event.clientY + 'px';
+});
+
+// ------------------------------------
+// CLICK TO TAG A BIRD
+// ------------------------------------
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -524,6 +629,8 @@ renderer.domElement.addEventListener('pointerdown', event => {
     }
 
     if (ducks.includes(obj)) {
+      const speciesName = obj.userData.species;
+
       scene.remove(obj);
       ducks.splice(ducks.indexOf(obj), 1);
 
@@ -534,14 +641,16 @@ renderer.domElement.addEventListener('pointerdown', event => {
       }
 
       updateUI();
+      message.textContent = '+10 POINTS — ' + speciesName;
+
       spawnDuck();
     }
   }
 });
 
-// ----------------------------------
-// ANIMATION
-// ----------------------------------
+// ------------------------------------
+// ANIMATION LOOP
+// ------------------------------------
 
 function animate() {
   requestAnimationFrame(animate);
@@ -561,14 +670,13 @@ function animate() {
 
 animate();
 
-// ----------------------------------
+// ------------------------------------
 // RESIZE
-// ----------------------------------
+// ------------------------------------
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / (innerHeight - 65);
   camera.updateProjectionMatrix();
-
   renderer.setSize(innerWidth, innerHeight - 65);
 });
 
